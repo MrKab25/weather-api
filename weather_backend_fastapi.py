@@ -64,7 +64,7 @@ def get_weighted_forecast():
             except (KeyError, ValueError, TypeError) as e:
                 raise HTTPException(status_code=500, detail=f"Missing or malformed forecast data in {model}: {str(e)}")
 
-            temp_error = [abs(f - a) for f, a in zip(forecast_temps, actual_temps)]
+            temp_error = [abs((f * 9/5 + 32) - (a * 9/5 + 32)) for f, a in zip(forecast_temps, actual_temps)]
             prob_error = [abs(f - a) for f, a in zip(forecast_probs, actual_probs)]
             amt_error = [abs(f - a) for f, a in zip(forecast_amts, actual_amts)]
 
@@ -95,6 +95,7 @@ def get_weighted_forecast():
         for i, time in enumerate(hours):
             try:
                 t_sum = sum((forecasts_by_model[m]["temperature_2m"][i] or 0) * weights[m][0] for m in MODELS)
+                t_sum = t_sum * 9/5 + 32  # Convert to Fahrenheit
                 p_sum = sum((forecasts_by_model[m]["precipitation_probability"][i] or 0) * weights[m][1] for m in MODELS)
                 a_sum = sum((forecasts_by_model[m]["precipitation"][i] or 0) * weights[m][2] for m in MODELS)
             except (KeyError, TypeError, IndexError):
