@@ -40,7 +40,7 @@ def get_weighted_forecast():
         model_errors = {model: [] for model in MODELS}
 
         for model in MODELS:
-            forecast_url = f"https://api.open-meteo.com/v1/forecast?latitude={LAT}&longitude={LON}&hourly=temperature_2m,precipitation,precipitation_probability&models={model}&forecast_days=1&timezone=auto"
+            forecast_url = f"https://api.open-meteo.com/v1/forecast?latitude={LAT}&longitude={LON}&hourly=temperature_2m,precipitation,precipitation_probability&model={model}&forecast_days=1&timezone=auto"
             forecast_resp = requests.get(forecast_url)
             if not forecast_resp.ok:
                 raise HTTPException(status_code=502, detail=f"Failed to fetch forecast for model {model}: {forecast_resp.status_code}")
@@ -73,7 +73,7 @@ def get_weighted_forecast():
         forecast_hours = []
         forecasts_by_model = {}
         for model in MODELS:
-            forecast_url = f"https://api.open-meteo.com/v1/forecast?latitude={LAT}&longitude={LON}&hourly=temperature_2m,precipitation,precipitation_probability&models={model}&forecast_days=7&timezone=auto"
+            forecast_url = f"https://api.open-meteo.com/v1/forecast?latitude={LAT}&longitude={LON}&hourly=temperature_2m,precipitation,precipitation_probability&model={model}&forecast_days=7&timezone=auto"
             f_resp = requests.get(forecast_url)
             if not f_resp.ok:
                 raise HTTPException(status_code=502, detail=f"Failed to fetch 7-day forecast for {model}: {f_resp.status_code}")
