@@ -54,15 +54,19 @@ def get_weighted_forecast():
                 if not all([forecast_temps, forecast_probs, forecast_amts]):
                     raise ValueError("Forecast data incomplete")
 
-                forecast_temps = forecast_temps[:len(actual_temps)]
-                forecast_probs = forecast_probs[:len(actual_probs)]
-                forecast_amts = forecast_amts[:len(actual_amts)]
+                forecast_temps = [f if f is not None else 0 for f in forecast_temps[:len(actual_temps)]]
+                forecast_probs = [f if f is not None else 0 for f in forecast_probs[:len(actual_probs)]]
+                forecast_amts = [f if f is not None else 0 for f in forecast_amts[:len(actual_amts)]]
+                actual_temps = [a if a is not None else 0 for a in actual_temps[:len(forecast_temps)]]
+                actual_probs = [a if a is not None else 0 for a in actual_probs[:len(forecast_probs)]]
+                actual_amts = [a if a is not None else 0 for a in actual_amts[:len(forecast_amts)]]
+
             except (KeyError, ValueError, TypeError) as e:
                 raise HTTPException(status_code=500, detail=f"Missing or malformed forecast data in {model}: {str(e)}")
 
-            temp_error = [abs(f - a) for f, a in zip(forecast_temps, actual_temps) if f is not None and a is not None]
-            prob_error = [abs(f - a) for f, a in zip(forecast_probs, actual_probs) if f is not None and a is not None]
-            amt_error = [abs(f - a) for f, a in zip(forecast_amts, actual_amts) if f is not None and a is not None]
+            temp_error = [abs(f - a) for f, a in zip(forecast_temps, actual_temps)]
+            prob_error = [abs(f - a) for f, a in zip(forecast_probs, actual_probs)]
+            amt_error = [abs(f - a) for f, a in zip(forecast_amts, actual_amts)]
 
             model_errors[model] = [
                 statistics.mean(temp_error) if temp_error else 0,
@@ -90,10 +94,10 @@ def get_weighted_forecast():
         hours = forecasts_by_model[MODELS[0]]["time"]
         for i, time in enumerate(hours):
             try:
-                t_sum = sum(forecasts_by_model[m]["temperature_2m"][i] * weights[m][0] for m in MODELS)
-                p_sum = sum(forecasts_by_model[m]["precipitation_probability"][i] * weights[m][1] for m in MODELS)
-                a_sum = sum(forecasts_by_model[m]["precipitation"][i] * weights[m][2] for m in MODELS)
-            except (KeyError, TypeError):
+                t_sum = sum((forecasts_by_model[m]["temperature_2m"][i] or 0) * weights[m][0] for m in MODELS)
+                p_sum = sum((forecasts_by_model[m]["precipitation_probability"][i] or 0) * weights[m][1] for m in MODELS)
+                a_sum = sum((forecasts_by_model[m]["precipitation"][i] or 0) * weights[m][2] for m in MODELS)
+            except (KeyError, TypeError, IndexError):
                 continue
 
             forecast_hours.append({
