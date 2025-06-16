@@ -3,5 +3,6 @@ services:
     name: weather-api
     env: python
     plan: free
-    buildCommand: ""
-    startCommand: "uvicorn weather_backend_fastapi:app --host 0.0.0.0 --port 10000"
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn weather_backend_fastapi:app --host 0.0.0.0 --port $PORT
+
