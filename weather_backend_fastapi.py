@@ -16,7 +16,7 @@ app.add_middleware(
 )
 
 LAT, LON = 40.0456, -86.0086
-MODELS = ["ecmwf", "gfs", "icon"]
+MODELS = ["gfs", "icon"]  # or ["gfs"] for maximum safety
 
 @app.get("/api/forecast")
 def get_weighted_forecast():
