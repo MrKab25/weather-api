@@ -47,20 +47,27 @@ def get_weighted_forecast():
             forecast_data = forecast_resp.json()
 
             try:
-                forecast_temps = forecast_data["hourly"]["temperature_2m"][:len(actual_temps)]
-                forecast_probs = forecast_data["hourly"]["precipitation_probability"][:len(actual_probs)]
-                forecast_amts = forecast_data["hourly"]["precipitation"][:len(actual_amts)]
-            except KeyError as e:
-                raise HTTPException(status_code=500, detail=f"Missing forecast key in {model}: {str(e)}")
+                forecast_temps = forecast_data["hourly"].get("temperature_2m")
+                forecast_probs = forecast_data["hourly"].get("precipitation_probability")
+                forecast_amts = forecast_data["hourly"].get("precipitation")
 
-            temp_error = [abs(f - a) for f, a in zip(forecast_temps, actual_temps)]
-            prob_error = [abs(f - a) for f, a in zip(forecast_probs, actual_probs)]
-            amt_error = [abs(f - a) for f, a in zip(forecast_amts, actual_amts)]
+                if not all([forecast_temps, forecast_probs, forecast_amts]):
+                    raise ValueError("Forecast data incomplete")
+
+                forecast_temps = forecast_temps[:len(actual_temps)]
+                forecast_probs = forecast_probs[:len(actual_probs)]
+                forecast_amts = forecast_amts[:len(actual_amts)]
+            except (KeyError, ValueError, TypeError) as e:
+                raise HTTPException(status_code=500, detail=f"Missing or malformed forecast data in {model}: {str(e)}")
+
+            temp_error = [abs(f - a) for f, a in zip(forecast_temps, actual_temps) if f is not None and a is not None]
+            prob_error = [abs(f - a) for f, a in zip(forecast_probs, actual_probs) if f is not None and a is not None]
+            amt_error = [abs(f - a) for f, a in zip(forecast_amts, actual_amts) if f is not None and a is not None]
 
             model_errors[model] = [
-                statistics.mean(temp_error),
-                statistics.mean(prob_error),
-                statistics.mean(amt_error),
+                statistics.mean(temp_error) if temp_error else 0,
+                statistics.mean(prob_error) if prob_error else 0,
+                statistics.mean(amt_error) if amt_error else 0,
             ]
 
         weights = {}
@@ -82,9 +89,12 @@ def get_weighted_forecast():
 
         hours = forecasts_by_model[MODELS[0]]["time"]
         for i, time in enumerate(hours):
-            t_sum = sum(forecasts_by_model[m]["temperature_2m"][i] * weights[m][0] for m in MODELS)
-            p_sum = sum(forecasts_by_model[m]["precipitation_probability"][i] * weights[m][1] for m in MODELS)
-            a_sum = sum(forecasts_by_model[m]["precipitation"][i] * weights[m][2] for m in MODELS)
+            try:
+                t_sum = sum(forecasts_by_model[m]["temperature_2m"][i] * weights[m][0] for m in MODELS)
+                p_sum = sum(forecasts_by_model[m]["precipitation_probability"][i] * weights[m][1] for m in MODELS)
+                a_sum = sum(forecasts_by_model[m]["precipitation"][i] * weights[m][2] for m in MODELS)
+            except (KeyError, TypeError):
+                continue
 
             forecast_hours.append({
                 "time": time,
